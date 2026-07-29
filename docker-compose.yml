@@ -1,0 +1,23 @@
+services:
+  livro-magico:
+    build:
+      context: https://github.com/adavid00/livro-magico.git#main
+
+    container_name: livro-magico
+
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATA_DIR: /app/data
+
+    volumes:
+      - livro_magico_data:/app/data
+
+volumes:
+  livro_magico_data: {}

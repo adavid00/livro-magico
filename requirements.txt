@@ -1,0 +1,1 @@
+# Nenhum pacote Python externo é necessário nesta versão.

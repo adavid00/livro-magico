@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.DS_Store
+historia_*.mp3
+historia_*.txt
+historia_*.json
+historia_*.tmp

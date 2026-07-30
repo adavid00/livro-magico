@@ -520,6 +520,13 @@ class ServidorLivro(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         caminho = urlparse(self.path).path
 
+        if caminho == "/":
+            self.enviar_json({
+                "servico": "livro-magico",
+                "status": "online"
+            })
+            return
+
         if caminho == "/health":
             self.enviar_json({
                 "status": "ok",
@@ -527,6 +534,12 @@ class ServidorLivro(SimpleHTTPRequestHandler):
                 "porta": PORTA,
                 "data_dir": str(PASTA)
             })
+            return
+
+        if caminho == "/data" or caminho.startswith("/data/"):
+            self.enviar_json({
+                "erro": "Acesso não permitido."
+            }, 403)
             return
 
         arquivo_mp3 = re.fullmatch(

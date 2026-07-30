@@ -12,7 +12,13 @@ import shutil
 import subprocess
 
 PORTA = int(os.environ.get("PORT", "8000"))
-PASTA = Path(__file__).resolve().parent
+PASTA = Path(
+    os.environ.get(
+        "DATA_DIR",
+        str(Path(__file__).resolve().parent)
+    )
+).resolve()
+PASTA.mkdir(parents=True, exist_ok=True)
 
 MODELO_TEXTO = "gpt-5-mini"
 MODELO_VOZ = "gpt-4o-mini-tts"
@@ -445,6 +451,28 @@ def solicitar_geracao(
     return True, "geracao_iniciada"
 
 
+def enviar_arquivo_mp3(
+    manipulador: SimpleHTTPRequestHandler,
+    arquivo: Path
+) -> None:
+    tamanho = arquivo.stat().st_size
+
+    manipulador.send_response(200)
+    manipulador.send_header("Content-Type", "audio/mpeg")
+    manipulador.send_header("Content-Length", str(tamanho))
+    manipulador.send_header("Cache-Control", "no-store")
+    manipulador.end_headers()
+
+    with arquivo.open("rb") as origem:
+        while True:
+            bloco = origem.read(64 * 1024)
+
+            if not bloco:
+                break
+
+            manipulador.wfile.write(bloco)
+
+
 class ServidorLivro(SimpleHTTPRequestHandler):
     def enviar_json(
         self,
@@ -496,8 +524,24 @@ class ServidorLivro(SimpleHTTPRequestHandler):
             self.enviar_json({
                 "status": "ok",
                 "servico": "livro-magico",
-                "porta": PORTA
+                "porta": PORTA,
+                "data_dir": str(PASTA)
             })
+            return
+
+        arquivo_mp3 = re.fullmatch(
+            r"/(historia_\d{6}\.mp3)",
+            caminho
+        )
+
+        if arquivo_mp3:
+            arquivo = PASTA / arquivo_mp3.group(1)
+
+            if not arquivo.exists():
+                self.send_error(404, "História não encontrada.")
+                return
+
+            enviar_arquivo_mp3(self, arquivo)
             return
 
         correspondencia = re.fullmatch(
@@ -658,7 +702,7 @@ if __name__ == "__main__":
     print(
         f"Servidor real do Livro Mágico em {host}:{PORTA}"
     )
-    print(f"Pasta: {PASTA}")
+    print(f"Pasta persistente: {PASTA}")
     print(f"Modelo de texto: {MODELO_TEXTO}")
     print(f"Modelo de voz: {MODELO_VOZ}")
     print(f"Voz: {VOZ}")

@@ -117,10 +117,13 @@ def chamar_openai_audio(
         "response_format": "mp3",
         "speed": 0.96,
         "instructions": (
-            "Narre em português brasileiro, como um contador de "
-            "histórias acolhedor e encantador. Use ritmo calmo, "
-            "boa expressividade e pausas naturais. Não leia títulos "
-            "ou marcações; conte apenas a história."
+            "Narre em português do Brasil com voz adulta, íntima, calma "
+            "e natural, como alguém contando uma história perto do "
+            "ouvinte. Use ritmo levemente contemplativo, pausas naturais "
+            "e um toque sutil de mistério. Evite soar infantil, teatral, "
+            "publicitário ou excessivamente dramático. Nos diálogos, "
+            "mantenha naturalidade. Não leia títulos, marcações ou "
+            "comentários; narre somente o conto."
         )
     }
 
@@ -190,24 +193,79 @@ def extrair_output_text(resposta: dict) -> str:
 
 def criar_prompt_historia(numero: int) -> str:
     return f"""
-Escreva uma história infantil original em português brasileiro para
-ser narrada por um livro mágico físico.
+Você é um escritor especializado em contos adultos, românticos,
+contemplativos e levemente misteriosos.
 
-Requisitos obrigatórios:
-- Esta é a história número {numero}.
-- Público principal: crianças de aproximadamente 4 a 9 anos.
-- Duração narrada aproximada: 2 a 3 minutos.
-- Produza entre 1.800 e 2.800 caracteres.
-- Crie personagens, cenário e conflito simples.
-- A história deve ser imaginativa, acolhedora e fácil de acompanhar.
-- Deve existir começo, desenvolvimento e final satisfatório.
-- Inclua uma mensagem positiva de forma natural, sem dar sermão.
-- Não use violência assustadora, morte, terror ou perigo intenso.
-- Não mencione inteligência artificial, aplicativo, servidor ou API.
-- Não use cabeçalho, título, tópicos, Markdown ou observações.
-- Entregue somente o texto que será narrado.
-- Evite repetir fórmulas muito conhecidas como "Era uma vez" em todas
-  as histórias; comece de maneira criativa.
+Escreva um conto inédito em português do Brasil para ser narrado em
+áudio a um casal adulto hospedado em um refúgio romântico. Esta é a
+história interna número {numero}; esse número não deve aparecer no texto.
+
+IDENTIDADE DA EXPERIÊNCIA
+- O conto deve provocar encantamento, curiosidade, intimidade,
+  nostalgia, esperança ou conexão.
+- O universo ficcional é inspirado em um refúgio isolado, cercado por
+  natureza, bambus, jardins, montanhas, trilhas, chuva, neblina, lua,
+  luzes distantes e objetos antigos.
+- Use realismo mágico sutil: algo impossível pode acontecer, mas deve
+  ser tratado com naturalidade.
+- Cada conto deve ser completo e independente, embora locais, símbolos
+  ou personagens secundários possam reaparecer ocasionalmente.
+
+FORMA E TAMANHO
+- Produza entre 3.300 e 3.950 caracteres, contando espaços.
+- Mire uma narração de aproximadamente 4 a 6 minutos.
+- Escreva em terceira pessoa, com linguagem adulta, acessível, elegante
+  e natural.
+- Use frases apropriadas para leitura em voz alta e evite períodos muito
+  longos.
+- Use poucos diálogos e mantenha-os curtos.
+- Comece diretamente com uma situação intrigante, uma descoberta ou um
+  pequeno mistério.
+- Desenvolva uma escolha, uma busca, uma promessa, uma lembrança, um
+  encontro, um reencontro ou uma descoberta.
+- Inclua uma pequena virada que mude o significado de algo apresentado
+  anteriormente.
+- Termine de forma emocional, poética ou levemente aberta, deixando
+  espaço para interpretação.
+- Não explique a moral da história.
+
+TOM
+- Íntimo, calmo, contemplativo, romântico e levemente misterioso.
+- Romantismo adulto e sutil, sem excesso de melodrama.
+- Descrições sensoriais moderadas e imagens marcantes, sem exagero.
+
+ELEMENTOS POSSÍVEIS
+Você pode usar alguns destes elementos, sem precisar usar todos:
+- jardim secreto, trilha entre bambus, chalé isolado ou hospedagem junto
+  às montanhas;
+- cartas, chaves, relógios, espelhos, fotografias ou objetos antigos;
+- promessas esquecidas, escolhas não realizadas, memórias, encontros e
+  reencontros;
+- lugares que aparecem apenas em determinados momentos.
+
+VARIEDADE
+- Crie uma história realmente diferente das anteriores.
+- Evite repetir sempre a fórmula de encontrar uma carta, voltar ao
+  passado ou revelar que duas pessoas já se conheciam.
+- Varie cenário, conflito emocional, elemento mágico, estrutura da
+  virada e tipo de encerramento.
+
+EVITE COMPLETAMENTE
+- linguagem ou personagens infantis;
+- começar com "Era uma vez";
+- erotismo explícito;
+- violência gráfica, terror intenso, abuso ou perigo pesado;
+- traição detalhada, tragédia pesada ou morte como tema central;
+- política, religião, autoajuda ou conselhos diretos de relacionamento;
+- moral explícita, frases excessivamente melosas ou finais perturbadores;
+- afirmar que o livro conhece, observa ou espiona quem está ouvindo;
+- mencionar inteligência artificial, prompt, servidor, aplicativo ou API.
+
+SAÍDA
+- Entregue somente o texto do conto.
+- Não inclua título, cabeçalho, capítulos, tópicos, Markdown, introdução,
+  observações ou explicações.
+- A primeira frase já deve fazer parte da narrativa.
 """.strip()
 
 
@@ -224,11 +282,13 @@ def gerar_texto_historia(numero: int) -> str:
     historia = extrair_output_text(resposta)
 
     if len(historia) > 4096:
-        historia = historia[:4090].rsplit(" ", 1)[0] + "."
-
-    if len(historia) < 500:
         raise RuntimeError(
-            "A história gerada ficou curta demais."
+            "A história ultrapassou o limite de 4096 caracteres do TTS."
+        )
+
+    if len(historia) < 2800:
+        raise RuntimeError(
+            "A história gerada ficou curta demais para a experiência."
         )
 
     return historia
@@ -241,6 +301,7 @@ def compactar_audio_mp3(origem: Path, destino: Path) -> None:
         "-vn",
         "-ac", CANAIS_AUDIO,
         "-ar", TAXA_AMOSTRAGEM,
+        "-af", "adelay=700,apad=pad_dur=1",
         "-b:a", BITRATE_MP3,
         "-f", "mp3",
         str(destino)

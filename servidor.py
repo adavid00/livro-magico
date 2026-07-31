@@ -212,8 +212,8 @@ IDENTIDADE DA EXPERIÊNCIA
   ou personagens secundários possam reaparecer ocasionalmente.
 
 FORMA E TAMANHO
-- Produza entre 3.300 e 3.950 caracteres, contando espaços.
-- Mire uma narração de aproximadamente 4 a 6 minutos.
+- Produza entre 2.800 e 3.400 caracteres, contando espaços.
+- Mire uma narração curta, de aproximadamente 3 a 5 minutos.
 - Escreva em terceira pessoa, com linguagem adulta, acessível, elegante
   e natural.
 - Use frases apropriadas para leitura em voz alta e evite períodos muito
@@ -270,28 +270,59 @@ SAÍDA
 
 
 def gerar_texto_historia(numero: int) -> str:
-    resposta = chamar_openai_json(
-        "responses",
-        {
-            "model": MODELO_TEXTO,
-            "store": False,
-            "input": criar_prompt_historia(numero)
-        }
-    )
+    limite_minimo = 2400
+    limite_preferido = 3400
+    limite_tts = 4096
+    ultima_historia = ""
 
-    historia = extrair_output_text(resposta)
+    for tentativa in range(1, 4):
+        complemento = ""
 
-    if len(historia) > 4096:
-        raise RuntimeError(
-            "A história ultrapassou o limite de 4096 caracteres do TTS."
+        if tentativa > 1:
+            complemento = (
+                "\n\nATENÇÃO AO TAMANHO: a tentativa anterior não respeitou "
+                "o limite. Produza obrigatoriamente entre 2.800 e 3.400 "
+                "caracteres, contando espaços. Não ultrapasse 3.400 caracteres."
+            )
+
+        resposta = chamar_openai_json(
+            "responses",
+            {
+                "model": MODELO_TEXTO,
+                "store": False,
+                "input": criar_prompt_historia(numero) + complemento
+            }
         )
 
-    if len(historia) < 2800:
-        raise RuntimeError(
-            "A história gerada ficou curta demais para a experiência."
+        historia = extrair_output_text(resposta)
+        ultima_historia = historia
+        tamanho = len(historia)
+
+        print(
+            f"[TEXTO] História {numero}: tentativa {tentativa}, "
+            f"{tamanho} caracteres."
         )
 
-    return historia
+        if limite_minimo <= tamanho <= limite_preferido:
+            return historia
+
+        if limite_preferido < tamanho <= limite_tts:
+            return historia
+
+    tamanho_final = len(ultima_historia)
+
+    if tamanho_final > limite_tts:
+        raise RuntimeError(
+            "A história ultrapassou o limite de 4096 caracteres do TTS "
+            "mesmo após 3 tentativas."
+        )
+
+    if tamanho_final < limite_minimo:
+        raise RuntimeError(
+            "A história ficou curta demais mesmo após 3 tentativas."
+        )
+
+    return ultima_historia
 
 
 def compactar_audio_mp3(origem: Path, destino: Path) -> None:
